@@ -27,30 +27,27 @@ int main()
      *
      *     Inner loop has the iteration z=z*z+c, and threshold test
      */
-
+    int tid = omp_get_thread_num();       // 当前线程 ID
+    int nthreads = omp_get_num_threads(); // 总线程数
     start = omp_get_wtime();
-#pragma omp parallel reduction(+ : numoutside)
+#pragma omp parallel for schedule(dynamic, 10) reduction(+ : numoutside)
+    for (int i = 0; i < NPOINTS; i++)
     {
-        int tid = omp_get_thread_num();       // 当前线程 ID
-        int nthreads = omp_get_num_threads(); // 总线程数
-        for (int i = tid; i < NPOINTS; i += nthreads)
+        for (int j = 0; j < NPOINTS; j++)
         {
-            for (int j = 0; j < NPOINTS; j++)
+            struct complex z, c;
+            c.real = -2.0 + 2.5 * (double)(i) / (double)(NPOINTS) + 1.0e-7;
+            c.imag = 1.125 * (double)(j) / (double)(NPOINTS) + 1.0e-7;
+            z = c;
+            for (int iter = 0; iter < MAXITER; iter++)
             {
-                struct complex z, c;
-                c.real = -2.0 + 2.5 * (double)(i) / (double)(NPOINTS) + 1.0e-7;
-                c.imag = 1.125 * (double)(j) / (double)(NPOINTS) + 1.0e-7;
-                z = c;
-                for (int iter = 0; iter < MAXITER; iter++)
+                double ztemp = (z.real * z.real) - (z.imag * z.imag) + c.real;
+                z.imag = z.real * z.imag * 2 + c.imag;
+                z.real = ztemp;
+                if ((z.real * z.real + z.imag * z.imag) > 4.0e0)
                 {
-                    double ztemp = (z.real * z.real) - (z.imag * z.imag) + c.real;
-                    z.imag = z.real * z.imag * 2 + c.imag;
-                    z.real = ztemp;
-                    if ((z.real * z.real + z.imag * z.imag) > 4.0e0)
-                    {
-                        numoutside++;
-                        break;
-                    }
+                    numoutside++;
+                    break;
                 }
             }
         }
